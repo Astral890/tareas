@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tareas Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        form { margin-bottom: 30px; max-width: 400px; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-weight: bold; margin-bottom: 4px; }
+        input, textarea, select { width: 100%; padding: 8px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f4f4f4; }
+    </style>
+</head>
+<body>
+
+    <h2>Añadir Nueva Tarea</h2>
+    <form id="tareaForm">
+        <div class="form-group">
+            <label for="title">Titulo:</label>
+            <input type="text" id="title" name="title" maxlength="80" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Descripción:</label>
+            <textarea id="description" name="description" maxlength="300" rows="3" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="status">Estado:</label>
+            <select id="status" name="status" required>
+                <option value="Pendiente">Pendiente</option>
+                <option value="En progreso">En progreso</option>
+                <option value="Completado">Completado</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="due_date">Fecha Límite:</label>
+            <input type="date" id="due_date" name="due_date" required>
+        </div>
+        
+        <button type="submit">Guardar Tarea</button>
+    </form>
+
+    <hr>
+
+    <h2>Lista de Tareas</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Titulo</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                <th>Fecha Límite</th>
+            </tr>
+        </thead>
+        <tbody id="tareasTableBody">
+            <!-- Dynamic rows will be inserted here -->
+        </tbody>
+    </table>
+
+    <script>
+        const API_URL = 'http://localhost:8080/tareas';
+
+        // Fetch and display all tasks
+        async function fetchTareas() {
+            try {
+                const response = await fetch(API_URL+"/getAll");
+                if (response.ok) {
+                    const tareas = await response.json();
+                    renderTable(tareas);
+                } else {
+                    console.error('Failed to fetch tasks');
+                }
+            } catch (error) {
+                console.error('Error fetching tasks:', error);
+            }
+        }
+
+        // Render rows inside the HTML table
+        function renderTable(tareas) {
+            const tableBody = document.getElementById('tareasTableBody');
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            if (tareas.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5">No tasks found.</td></tr>';
+                return;
+            }
+
+            tareas.forEach(tarea => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${tarea.title ?? ''}</td>
+                    <td>${tarea.description ?? ''}</td>
+                    <td>${tarea.status ?? ''}</td>
+                    <td>${tarea.due_date ?? ''}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('tareaForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const tareaData = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                status: document.getElementById('status').value,
+                due_date: document.getElementById('due_date').value
+            };
+
+            try {
+                const response = await fetch(API_URL+"/save", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(tareaData)
+                });
+
+                if (response.ok) {
+                    document.getElementById('tareaForm').reset();
+                    await fetchTareas(); // Refresh the table list immediately
+                } else {
+                    alert('Error saving task');
+                }
+            } catch (error) {
+                console.error('Network error:', error);
+            }
+        });
+
+        // Load tasks automatically when page loads
+        fetchTareas();
+    </script>
+
+</body>
+</html>
